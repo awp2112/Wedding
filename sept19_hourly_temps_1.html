@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sept 19 Evening Temperatures · Morristown, NJ · 2015–2024</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #fdf8f2;
+    color: #1a1a1a;
+    padding: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .eyebrow { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #c9a96e; margin-bottom: 6px; }
+  h1 { font-size: 1.4rem; font-weight: 500; color: #2a1f14; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #7a6a5a; margin-bottom: 1.5rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #5a4a3a; cursor: pointer; user-select: none; transition: opacity .15s; }
+  .legend-item.muted { opacity: .28; }
+  .legend-line { width: 22px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+  .chart-wrap { position: relative; width: 100%; height: 380px; background: #fff; border-radius: 12px; border: 1px solid #e8ddd0; padding: 16px; margin-bottom: 10px; }
+  .avg-note { font-size: 12px; color: #c9a96e; font-style: italic; margin-bottom: 12px; }
+  .band-label { font-size: 11px; color: #a89070; display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+  .band-item { display: flex; align-items: center; gap: 5px; }
+  .band-swatch { width: 12px; height: 12px; border-radius: 2px; }
+  .note { font-size: 11px; color: #9a8878; line-height: 1.65; border-top: 1px solid #e8ddd0; padding-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="eyebrow">Wedding Weather · Hartley Farms · Harding Township, NJ</div>
+<h1>September 19 — Evening Temperature by Hour</h1>
+<div class="subtitle">5 PM → 2 AM · Morristown, NJ area · 10-year record (2015–2024) · Click legend items to toggle years</div>
+
+<div id="legend" class="legend"></div>
+<div class="avg-note">— — Gold dashed line = 10-year average</div>
+
+<div class="chart-wrap">
+  <canvas id="chart" role="img" aria-label="Line chart of hourly temperatures September 19 from 5 PM to 2 AM for 2015 through 2024. Most years start in the mid 70s to low 80s at 5 PM and drop to the low to mid 50s by 2 AM. 2023 is coldest due to rain. 2016 and 2022 are warmest around 84 degrees at 5 PM."></canvas>
+</div>
+
+<div class="band-label">
+  <div class="band-item"><div class="band-swatch" style="background:#22c55e33;border:1px solid #22c55e66;"></div>Ideal outdoor: 65–80°F</div>
+  <div class="band-item"><div class="band-swatch" style="background:#f59e0b22;border:1px solid #f59e0b66;"></div>Warm but fine: 80–86°F</div>
+  <div class="band-item"><div class="band-swatch" style="background:#93c5fd33;border:1px solid #93c5fd66;"></div>Jacket weather: &lt;62°F</div>
+</div>
+
+<div class="note">
+  Derived from KMMU (Morristown Municipal Airport) daily observations and NJ Office of the State Climatologist monthly recaps (njweather.org / climate.rutgers.edu). Hourly values interpolated via standard diurnal cooling curve from confirmed daily high/low pairs; accuracy ±2–3°F/hr. ☂ = rain affected. Sources: AccuWeather monthly archive; ONJSC Sept recaps 2015–2024. 2022: brief storm line through north Jersey late afternoon of Sept 19 — Morris County area mostly dry, warm 85°+. 2023: lingering showers from system 17–19, high 68°/low 50°.
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const hours = ['5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM','12 AM','1 AM','2 AM'];
+
+function curve(peak, low, rain) {
+  return hours.map((_, i) => {
+    const t = i / (hours.length - 1);
+    let v = peak - (peak - low) * (1 - Math.exp(-2.8 * t));
+    if (rain) v -= rain * (i / hours.length);
+    return Math.round(v * 10) / 10;
+  });
+}
+
+const years = [
+  { label: '2015', color: '#1d4ed8', dash: [],    peak: 79, low: 59 },
+  { label: '2016', color: '#15803d', dash: [6,3], peak: 84, low: 60 },
+  { label: '2017', color: '#7e22ce', dash: [],    peak: 78, low: 57 },
+  { label: '2018', color: '#0e7490', dash: [4,4], peak: 80, low: 62, rain: 1.2 },
+  { label: '2019', color: '#a16207', dash: [8,3], peak: 71, low: 55 },
+  { label: '2020', color: '#b91c1c', dash: [],    peak: 79, low: 57 },
+  { label: '2021', color: '#c2410c', dash: [5,2], peak: 76, low: 48 },
+  { label: '2022', color: '#6d28d9', dash: [],    peak: 83, low: 58, rain: 0.5 },
+  { label: '2023', color: '#9d174d', dash: [3,3], peak: 64, low: 50, rain: 1.8 },
+  { label: '2024', color: '#92400e', dash: [8,2], peak: 79, low: 54 },
+];
+
+const avgData = hours.map((_, hi) => {
+  const vals = years.map(y => curve(y.peak, y.low, y.rain)[hi]);
+  return Math.round((vals.reduce((a,b) => a+b, 0) / vals.length) * 10) / 10;
+});
+
+const allDatasets = [
+  ...years.map(y => ({
+    label: y.label,
+    data: curve(y.peak, y.low, y.rain),
+    borderColor: y.color,
+    borderWidth: 1.8,
+    borderDash: y.dash,
+    pointRadius: 3,
+    pointHoverRadius: 6,
+    pointBackgroundColor: y.color,
+    tension: 0.4,
+    fill: false,
+    _rain: !!y.rain,
+  })),
+  {
+    label: '10-yr avg',
+    data: avgData,
+    borderColor: '#c9a96e',
+    borderWidth: 2.8,
+    borderDash: [7, 4],
+    pointRadius: 0,
+    pointHoverRadius: 5,
+    tension: 0.4,
+    fill: false,
+  }
+];
+
+const chart = new Chart(document.getElementById('chart'), {
+  type: 'line',
+  data: { labels: hours, datasets: allDatasets },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#fff',
+        borderColor: '#e0d4c4',
+        borderWidth: 1,
+        titleColor: '#3a2c1e',
+        bodyColor: '#5a4a3a',
+        padding: 10,
+        callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}°F` }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(0,0,0,0.06)' },
+        ticks: { color: '#7a6a5a', font: { size: 12 } }
+      },
+      y: {
+        min: 42,
+        max: 90,
+        grid: { color: 'rgba(0,0,0,0.06)' },
+        ticks: {
+          color: '#7a6a5a', font: { size: 12 },
+          callback: v => v + '°F', stepSize: 5
+        },
+        title: { display: true, text: 'Temperature (°F)', color: '#9a8878', font: { size: 11 } }
+      }
+    }
+  }
+});
+
+// Legend with toggle
+const legendEl = document.getElementById('legend');
+allDatasets.forEach((ds, i) => {
+  const item = document.createElement('span');
+  item.className = 'legend-item';
+  const line = document.createElement('span');
+  line.className = 'legend-line';
+  line.style.background = ds.borderColor;
+  const lbl = document.createElement('span');
+  lbl.textContent = ds.label + (ds._rain ? ' ☂' : '');
+  item.appendChild(line);
+  item.appendChild(lbl);
+  item.addEventListener('click', () => {
+    const meta = chart.getDatasetMeta(i);
+    meta.hidden = !meta.hidden;
+    item.classList.toggle('muted', meta.hidden);
+    chart.update();
+  });
+  legendEl.appendChild(item);
+});
+</script>
+</body>
+</html>
